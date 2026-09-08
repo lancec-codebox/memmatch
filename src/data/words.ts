@@ -32,7 +32,6 @@ export interface Card {
   content: string;
   isFaceUp: boolean;
   isMatched: boolean;
-  isRemoving: boolean;
 }
 
 export function createCards(wordIndices: number[]): Card[] {
@@ -47,7 +46,6 @@ export function createCards(wordIndices: number[]): Card[] {
       content: word.hanzi,
       isFaceUp: false,
       isMatched: false,
-      isRemoving: false,
     });
     cards.push({
       id: `${wordIndex}-pinyin`,
@@ -56,7 +54,6 @@ export function createCards(wordIndices: number[]): Card[] {
       content: word.pinyin,
       isFaceUp: false,
       isMatched: false,
-      isRemoving: false,
     });
     cards.push({
       id: `${wordIndex}-english`,
@@ -65,7 +62,6 @@ export function createCards(wordIndices: number[]): Card[] {
       content: word.english,
       isFaceUp: false,
       isMatched: false,
-      isRemoving: false,
     });
   });
 

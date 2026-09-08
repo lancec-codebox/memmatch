@@ -114,7 +114,7 @@ export default function App() {
     (cardIndex: number) => {
       if (isLocked || gameWon) return;
       const card = cards[cardIndex];
-      if (card.isFaceUp || card.isMatched || card.isRemoving) return;
+      if (card.isFaceUp || card.isMatched) return;
 
       // Flip the card
       const newCards = [...cards];
@@ -154,48 +154,37 @@ export default function App() {
         setMoves((m) => m + 1);
         // Check if third card completes the set
         if (newSelected[0].wordIndex === newSelected[2].wordIndex) {
-          // Complete match! Remove all three
+          // Complete match! Keep all three face-up
           const comboBonus = combo >= 2 ? combo * 10 : 0;
           const points = 100 + comboBonus;
           setScore((s) => s + points);
           displayMessage(combo >= 2 ? `🔥 Combo x${combo + 1}! +${points}` : `+${points} points!`);
 
-          // Animate removal
           setIsLocked(true);
           setTimeout(() => {
-            setCards((prev) =>
-              prev.map((c) =>
+            setCards((prev) => {
+              const updated = prev.map((c) =>
                 newSelected.some((s) => s.id === c.id)
-                  ? { ...c, isRemoving: true }
+                  ? { ...c, isMatched: true }
                   : c
-              )
-            );
-            setTimeout(() => {
-              setCards((prev) =>
-                prev.map((c) =>
-                  newSelected.some((s) => s.id === c.id)
-                    ? { ...c, isMatched: true, isFaceUp: false }
-                    : c
-                )
               );
-              setSelectedCards([]);
-              setIsLocked(false);
-              setCombo((c) => c + 1);
-
               // Check win
-              setCards((prev) => {
-                const remaining = prev.filter((c) => !c.isMatched);
-                if (remaining.length === 0) {
+              const allMatched = updated.every((c) => c.isMatched);
+              if (allMatched) {
+                setTimeout(() => {
                   setGameWon(true);
                   setScore((currentScore) => {
                     saveHighScore(difficulty, currentScore);
                     setHighScores(getHighScores());
                     return currentScore;
                   });
-                }
-                return prev;
-              });
-            }, 500);
+                }, 300);
+              }
+              return updated;
+            });
+            setSelectedCards([]);
+            setIsLocked(false);
+            setCombo((c) => c + 1);
           }, 600);
         } else {
           // Wrong third card - flip all back
@@ -293,7 +282,7 @@ export default function App() {
 
   const activeCards = cards.filter((c) => !c.isMatched);
   const totalWords = DIFFICULTY_CONFIG[difficulty].words;
-  const wordsCompleted = totalWords - Math.ceil(activeCards.length / 3);
+  const wordsCompleted = totalWords - activeCards.length / 3;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col">
@@ -428,20 +417,16 @@ interface CardComponentProps {
 }
 
 function CardComponent({ card, isFocused, isSelected, onClick }: CardComponentProps) {
-  const isRevealed = card.isFaceUp;
-
-  if (card.isMatched) {
-    return <div className="aspect-[3/4] sm:aspect-[3/4]" />;
-  }
+  const isRevealed = card.isFaceUp || card.isMatched;
 
   return (
     <div
-      className={`aspect-[3/4] cursor-pointer perspective-1000 ${
-        card.isRemoving ? "animate-[shrinkOut_0.5s_ease-in_forwards]" : ""
+      className={`aspect-[3/4] perspective-1000 ${
+        card.isMatched ? "cursor-default" : "cursor-pointer"
       }`}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
+      onClick={card.isMatched ? undefined : onClick}
+      role={!card.isMatched ? "button" : undefined}
+      tabIndex={!card.isMatched ? 0 : undefined}
       aria-label={isRevealed ? `Card showing ${card.content}` : "Face down card"}
     >
       <div
@@ -471,9 +456,11 @@ function CardComponent({ card, isFocused, isSelected, onClick }: CardComponentPr
         {/* Front of card (face up) */}
         <div
           className={`absolute inset-0 backface-hidden rotate-y-180 rounded-xl flex flex-col items-center justify-center p-2
-            transition-all duration-200
+            transition-all duration-300
             ${
-              isFocused
+              card.isMatched
+                ? "ring-2 ring-emerald-400/60 shadow-md shadow-emerald-400/20 opacity-80"
+                : isFocused
                 ? "ring-3 ring-amber-400 shadow-lg shadow-amber-400/30 scale-105"
                 : isSelected
                 ? "ring-2 ring-purple-400"
@@ -498,6 +485,9 @@ function CardComponent({ card, isFocused, isSelected, onClick }: CardComponentPr
           >
             {card.content}
           </span>
+          {card.isMatched && (
+            <span className="absolute top-1 right-1 text-emerald-300 text-sm">✓</span>
+          )}
         </div>
       </div>
     </div>
